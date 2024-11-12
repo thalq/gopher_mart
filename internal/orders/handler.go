@@ -2,6 +2,7 @@ package orders
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"strings"
@@ -25,7 +26,7 @@ func (h *OrderHandler) UploadOrder(w http.ResponseWriter, r *http.Request) {
 
 	userID, ok := ctx.Value(constants.UserIDKey).(int64)
 	if !ok {
-		http.Error(w, "User not found", http.StatusUnauthorized)
+		http.Error(w, "User unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -68,4 +69,34 @@ func (h *OrderHandler) UploadOrder(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+}
+
+func (h *OrderHandler) GetOrders(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	userID, ok := ctx.Value(constants.UserIDKey).(int64)
+	if !ok {
+		http.Error(w, "User unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	orders, err := h.service.GetOrders(userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if len(orders) == 0 {
+		http.Error(w, "No orders for user", http.StatusNoContent)
+		return
+	}
+	logger.Sugar.Infof("Got %d orders for user", len(orders))
+	response, err := json.Marshal(orders)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("content-type", "application/json")
+	w.Write(response)
+	w.WriteHeader(http.StatusOK)
 }

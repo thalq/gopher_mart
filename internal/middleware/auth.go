@@ -38,8 +38,6 @@ func AuthMiddleware(jwtSecret string) func(next http.Handler) http.Handler {
 					http.Error(w, "Token is not valid", http.StatusUnauthorized)
 					return
 				}
-				fmt.Println("!!!!!!!!!!!!!!!!!!!!")
-				fmt.Println(claims.UserID)
 				ctx := context.WithValue(r.Context(), constants.UserIDKey, claims.UserID)
 				r = r.WithContext(ctx)
 			}

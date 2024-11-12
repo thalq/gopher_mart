@@ -27,5 +27,6 @@ func NewRouter(cfg *config.Config) http.Handler {
 	r.Post("/api/user/register", authHandler.Register)
 	r.Post("/api/user/login", authHandler.Login)
 	r.Post("/api/user/orders", orderHandler.UploadOrder)
+	r.Get("/api/user/orders", orderHandler.GetOrders)
 	return r
 }

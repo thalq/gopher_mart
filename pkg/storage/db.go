@@ -30,7 +30,7 @@ func InitDB(connectionString string) {
 	createOrdersTable := `CREATE TABLE IF NOT EXISTS orders (
         user_id INT REFERENCES users(id),
         order_id VARCHAR(255),
-		status VARCHAR(10) DEFAULT 'NEW' CHECK (status IN ('NEW', 'PROCESSING', 'INVALID', 'PROCESSED'))
+		status VARCHAR(10) DEFAULT 'NEW' CHECK (status IN ('NEW', 'PROCESSING', 'INVALID', 'PROCESSED')),
 		upload_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`
 
