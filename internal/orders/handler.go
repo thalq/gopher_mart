@@ -1,0 +1,71 @@
+package orders
+
+import (
+	"context"
+	"io"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/thalq/gopher_mart/internal/constants"
+	logger "github.com/thalq/gopher_mart/internal/middleware"
+)
+
+type OrderHandler struct {
+	service *OrderService
+}
+
+func NewOrderHandler(service *OrderService) *OrderHandler {
+	return &OrderHandler{service: service}
+}
+
+func (h *OrderHandler) UploadOrder(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	userID, ok := ctx.Value(constants.UserIDKey).(int64)
+	if !ok {
+		http.Error(w, "User not found", http.StatusUnauthorized)
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Failed to read request body", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+	orderNumber := strings.TrimSpace(string(body))
+
+	// if !ValidateOrderNumber(orderNumber) {
+	// 	http.Error(w, "Invalid order number", http.StatusBadRequest)
+	// 	return
+	// }
+	userHasOrder, err := h.service.CheckUserHasOrders(userID, orderNumber)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if userHasOrder {
+		w.WriteHeader(http.StatusOK)
+		logger.Sugar.Infof("User %s has order %s", userID, orderNumber)
+	} else {
+		otherUserHasOrder, err := h.service.CheckOtherUserHasOrders(orderNumber)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if otherUserHasOrder {
+			http.Error(w, "Order already exists", http.StatusConflict)
+			logger.Sugar.Infof("Order %s already exists for another user", orderNumber)
+		} else {
+			if err := h.service.CreateOrder(userID, orderNumber); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.WriteHeader(http.StatusAccepted)
+			logger.Sugar.Infof("User %s created order %s", userID, orderNumber)
+		}
+	}
+
+}

@@ -1,13 +1,13 @@
 package auth
 
 import (
-	"errors"
 	"time"
 
 	"database/sql"
 
 	"github.com/golang-jwt/jwt"
 	logger "github.com/thalq/gopher_mart/internal/middleware"
+	"github.com/thalq/gopher_mart/internal/models"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -22,15 +22,20 @@ func NewAuthService(db *sql.DB, jwtSecret string) *AuthService {
 		jwtSecret: jwtSecret}
 }
 
-func (s *AuthService) GenerateToken(username string) string {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
-		Subject:   username,
-		ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
-	})
+func (s *AuthService) GenerateToken(userID int64) string {
+	claims := &models.Claims{
+		UserID: userID,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(24 * time.Hour).Unix(),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString([]byte(s.jwtSecret))
 	if err != nil {
-		logger.Sugar.Errorf("Error generate token: %s", err)
+		return ""
 	}
+
 	return tokenString
 }
 
@@ -43,35 +48,42 @@ func (s *AuthService) CheckUserExists(username string) (bool, error) {
 	return userExists, nil
 }
 
-func (s *AuthService) Register(login, password string) error {
+func (s *AuthService) Register(login, password string) (int64, error) {
 	hash, err := s.HashPassword(password)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	_, err = s.db.Exec("INSERT INTO users (username, password) VALUES ($1, $2)", login, hash)
+	result, err := s.db.Exec("INSERT INTO users (username, password) VALUES ($1, $2)", login, hash)
 	if err != nil {
 		logger.Sugar.Errorf("Error insert user to db: %s", err)
-		return err
+		return 0, err
 	}
-	return nil
+	userID, err := result.LastInsertId()
+	if err != nil {
+		logger.Sugar.Errorf("Error getting last insert ID: %s", err)
+		return 0, err
+	}
+	return userID, nil
 }
 
-func (s *AuthService) Authenticate(login, password string) (bool, error) {
+func (s *AuthService) Authenticate(login, password string) (bool, int64, error) {
 	var storedPassword string
-	err := s.db.QueryRow("SELECT password FROM users WHERE username = $1", login).Scan(&storedPassword)
+	var userID int64
+
+	err := s.db.QueryRow("SELECT id, password FROM users WHERE username = $1", login).Scan(&userID, &storedPassword)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			logger.Sugar.Infof("User %s not found", login)
-			return false, nil
-		}
 		logger.Sugar.Errorf("Error get user from db: %s", err)
-		return false, err
+		return false, 0, err
 	}
-	if err := bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(password)); err != nil {
-		logger.Sugar.Infof("Password for user %s is incorrect", login)
-		return false, nil
+	if !s.CheckPasswordHash(password, storedPassword) {
+		return false, 0, nil
 	}
-	return true, nil
+	return true, userID, nil
+}
+
+func (s *AuthService) CheckPasswordHash(password, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
 }
 
 func (s *AuthService) HashPassword(password string) (string, error) {

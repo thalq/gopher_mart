@@ -18,15 +18,26 @@ func InitDB(connectionString string) {
 	if err := db.Ping(); err != nil {
 		logger.Sugar.Fatalf("Error ping db: %s", err)
 	}
-	createTable := `CREATE TABLE IF NOT EXISTS users (
+	createUsersTable := `CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         username VARCHAR(255) UNIQUE,
         password VARCHAR(255)
     )`
 
-	if _, err := db.Exec(createTable); err != nil {
+	if _, err := db.Exec(createUsersTable); err != nil {
 		logger.Sugar.Fatalf("Error create table: %s", err)
 	}
+	createOrdersTable := `CREATE TABLE IF NOT EXISTS orders (
+        user_id INT REFERENCES users(id),
+        order_id VARCHAR(255),
+		status VARCHAR(10) DEFAULT 'NEW' CHECK (status IN ('NEW', 'PROCESSING', 'INVALID', 'PROCESSED'))
+		upload_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`
+
+	if _, err := db.Exec(createOrdersTable); err != nil {
+		logger.Sugar.Fatalf("Error create orders table: %s", err)
+	}
+
 	logger.Sugar.Info("DB connected")
 }
 

@@ -59,12 +59,13 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.service.Register(req.Login, req.Password); err != nil {
+	userID, err := h.service.Register(req.Login, req.Password)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	token := h.service.GenerateToken(req.Login)
+	token := h.service.GenerateToken(userID)
 	http.SetCookie(w, &http.Cookie{
 		Name:    "Authorization",
 		Value:   token,
@@ -93,7 +94,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	autheticated, err := h.service.Authenticate(req.Login, req.Password)
+	autheticated, userID, err := h.service.Authenticate(req.Login, req.Password)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -104,7 +105,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	logger.Sugar.Infof("User %s authenticated", req.Login)
 
-	token := h.service.GenerateToken(req.Login)
+	token := h.service.GenerateToken(userID)
 	http.SetCookie(w, &http.Cookie{
 		Name:    "Authorization",
 		Value:   token,
