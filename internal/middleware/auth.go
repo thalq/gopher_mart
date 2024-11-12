@@ -15,13 +15,6 @@ func AuthMiddleware(jwtSecret string) func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			tokenString, err := r.Cookie("Authorization")
 			if err == nil {
-				// 	http.Error(w, "Failed to get token", http.StatusInternalServerError)
-				// 	return
-				// }
-				// if tokenString == nil {
-				// 	http.Error(w, "Unauthorized", http.StatusUnauthorized)
-				// 	return
-				// }
 				claims := &models.Claims{}
 				token, err := jwt.ParseWithClaims(tokenString.Value, claims,
 					func(t *jwt.Token) (interface{}, error) {
