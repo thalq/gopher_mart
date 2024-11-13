@@ -24,9 +24,12 @@ func NewRouter(cfg *config.Config) http.Handler {
 	authHandler := auth.NewAuthHandler(authService)
 	orderService := orders.NewOrderService(db)
 	orderHandler := orders.NewOrderHandler(orderService)
-	r.Post("/api/user/register", authHandler.Register)
-	r.Post("/api/user/login", authHandler.Login)
-	r.Post("/api/user/orders", orderHandler.UploadOrder)
-	r.Get("/api/user/orders", orderHandler.GetOrders)
+	r.Route("/api/user", func(r chi.Router) {
+		r.Post("/register", authHandler.Register)
+		r.Post("/login", authHandler.Login)
+		r.Post("/orders", orderHandler.UploadOrder)
+		r.Get("/orders", orderHandler.GetOrders)
+		r.Get("/balance", orderHandler.GetBalance)
+	})
 	return r
 }

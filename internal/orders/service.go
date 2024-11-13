@@ -60,3 +60,13 @@ func (s *OrderService) GetOrders(userID int64) ([]models.Order, error) {
 
 	return orders, nil
 }
+
+func (s *OrderService) GetBalance(userID int64) (models.Balance, error) {
+	var balance models.Balance
+	if err := s.db.QueryRow("SELECT SUM(withdrawal), SUM(current) FROM orders WHERE user_id = $1", userID).Scan(&balance.Withdrawn, &balance.Current); err != nil {
+		return balance, err
+	}
+	logger.Sugar.Infof("Got balance for user %s: %v", userID, balance)
+
+	return balance, nil
+}

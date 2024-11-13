@@ -16,3 +16,8 @@ type Order struct {
 	Status     string    `json:"status"`
 	UploadTime time.Time `json:"upload_time"`
 }
+
+type Balance struct {
+	Current   int64 `json:"current"`
+	Withdrawn int64 `json:"withdrawn"`
+}

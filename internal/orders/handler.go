@@ -100,3 +100,29 @@ func (h *OrderHandler) GetOrders(w http.ResponseWriter, r *http.Request) {
 	w.Write(response)
 	w.WriteHeader(http.StatusOK)
 }
+
+func (h *OrderHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	userID, ok := ctx.Value(constants.UserIDKey).(int64)
+	if !ok {
+		http.Error(w, "User unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	balance, err := h.service.GetBalance(userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	logger.Sugar.Infof("Got balance for user %s", userID)
+	response, err := json.Marshal(balance)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("content-type", "application/json")
+	w.Write(response)
+	w.WriteHeader(http.StatusOK)
+}
