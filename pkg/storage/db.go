@@ -28,14 +28,37 @@ func InitDB(connectionString string) {
 		logger.Sugar.Fatalf("Error create table: %s", err)
 	}
 	createOrdersTable := `CREATE TABLE IF NOT EXISTS orders (
-        user_id INT REFERENCES users(id),
-        order_id VARCHAR(255),
+		user_id INT REFERENCES users(id),
+		order_id VARCHAR(255),
 		status VARCHAR(10) DEFAULT 'NEW' CHECK (status IN ('NEW', 'PROCESSING', 'INVALID', 'PROCESSED')),
-		upload_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )`
+		upload_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		accrual INT,
+		withdrawal INT,
+		current INT
+	)`
 
 	if _, err := db.Exec(createOrdersTable); err != nil {
 		logger.Sugar.Fatalf("Error create orders table: %s", err)
+	}
+
+	createTriggerFunction := `CREATE OR REPLACE FUNCTION update_current()
+	RETURNS TRIGGER AS $$
+	BEGIN
+		NEW.current := NEW.accrual - NEW.withdrawal;
+		RETURN NEW;
+	END;
+	$$ LANGUAGE plpgsql;`
+
+	if _, err := db.Exec(createTriggerFunction); err != nil {
+		logger.Sugar.Fatalf("Error create trigger function: %s", err)
+	}
+
+	createTrigger := `CREATE TRIGGER update_current_trigger
+	BEFORE INSERT OR UPDATE ON orders
+	FOR EACH ROW EXECUTE FUNCTION update_current();`
+
+	if _, err := db.Exec(createTrigger); err != nil {
+		logger.Sugar.Fatalf("Error create trigger: %s", err)
 	}
 
 	logger.Sugar.Info("DB connected")
