@@ -3,6 +3,8 @@ package orders
 import (
 	"database/sql"
 
+	"net/http"
+
 	logger "github.com/thalq/gopher_mart/internal/middleware"
 	"github.com/thalq/gopher_mart/internal/models"
 )
@@ -70,3 +72,65 @@ func (s *OrderService) GetBalance(userID int64) (models.Balance, error) {
 
 	return balance, nil
 }
+
+func (s *OrderService) WithdrawRequest(userID int64, orderId string, sum int64) int {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return http.StatusBadRequest
+	}
+	defer tx.Rollback()
+
+	var currentBalance sql.NullInt64
+
+	if err := tx.QueryRow("SELECT accrual FROM orders WHERE user_id = $1 AND order_id = $2", userID, orderId).Scan(&currentBalance); err != nil {
+		if err == sql.ErrNoRows {
+			logger.Sugar.Errorf("Order %s not found for user %d", orderId, userID)
+			return http.StatusUnprocessableEntity
+		}
+		logger.Sugar.Errorf("Failed to get current balance: %v", err)
+		return http.StatusInternalServerError
+	}
+	if !currentBalance.Valid || currentBalance.Int64 < sum {
+		logger.Sugar.Errorf("Not enough money for user %d", userID)
+		return http.StatusPaymentRequired
+	}
+
+	_, err = tx.Exec("UPDATE orders SET withdrawal = withdrawal + $1 WHERE user_id = $2 AND order_id = $3", sum, userID, orderId)
+	if err != nil {
+		logger.Sugar.Errorf("Failed to withdraw: %v", err)
+		return http.StatusInternalServerError
+	}
+
+	if err = tx.Commit(); err != nil {
+		logger.Sugar.Errorf("Failed to commit transaction: %v", err)
+		return http.StatusInternalServerError
+	}
+
+	logger.Sugar.Infof("Withdraw %d for user %d", sum, userID)
+	return http.StatusOK
+}
+
+// func (s *OrderService) WithdrawRequest(userID int64, orderId string, sum int64) int {
+// 	var currentBalance sql.NullInt64
+// 	if err := s.db.QueryRow("SELECT accrual FROM orders WHERE user_id = $1 AND order_id = $2", userID, orderId).Scan(&currentBalance); err != nil {
+// 		if err == sql.ErrNoRows {
+// 			logger.Sugar.Errorf("Order %s not found for user %d", orderId, userID)
+// 			return http.StatusUnprocessableEntity
+// 		}
+// 		logger.Sugar.Errorf("Failed to get current balance: %v", err)
+// 		return http.StatusInternalServerError
+// 	}
+// 	if !currentBalance.Valid || currentBalance.Int64 < sum {
+// 		logger.Sugar.Errorf("Not enough money for user %d", userID)
+// 		return http.StatusPaymentRequired
+// 	}
+
+// 	_, err := s.db.Exec("UPDATE orders SET withdrawal = withdrawal + $1 WHERE user_id = $2 AND order_id = $3", sum, userID, orderId)
+// 	if err != nil {
+// 		logger.Sugar.Errorf("Failed to withdraw: %v", err)
+// 		return http.StatusInternalServerError
+// 	}
+
+// 	logger.Sugar.Infof("Withdraw %d for user %d", sum, userID)
+// 	return http.StatusOK
+// }

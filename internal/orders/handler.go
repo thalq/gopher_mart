@@ -10,6 +10,7 @@ import (
 
 	"github.com/thalq/gopher_mart/internal/constants"
 	logger "github.com/thalq/gopher_mart/internal/middleware"
+	"github.com/thalq/gopher_mart/internal/models"
 )
 
 type OrderHandler struct {
@@ -125,4 +126,32 @@ func (h *OrderHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type", "application/json")
 	w.Write(response)
 	w.WriteHeader(http.StatusOK)
+}
+
+func (h *OrderHandler) WithdrawRequest(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	userID, ok := ctx.Value(constants.UserIDKey).(int64)
+	if !ok {
+		http.Error(w, "User unauthorized", http.StatusUnauthorized)
+		return
+	}
+	logger.Sugar.Infof("User %s requested withdraw", userID)
+
+	var request models.WithdrawRequest
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Failed to read request body", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+	if err := json.Unmarshal(body, &request); err != nil {
+		http.Error(w, "Failed to unmarshal request", http.StatusBadRequest)
+		return
+	}
+	logger.Sugar.Infof("Got withdraw request: %v", request)
+
+	response := h.service.WithdrawRequest(userID, request.Order, request.Sum)
+	w.WriteHeader(response)
 }

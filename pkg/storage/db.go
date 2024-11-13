@@ -32,13 +32,18 @@ func InitDB(connectionString string) {
 		order_id VARCHAR(255),
 		status VARCHAR(10) DEFAULT 'NEW' CHECK (status IN ('NEW', 'PROCESSING', 'INVALID', 'PROCESSED')),
 		upload_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-		accrual INT,
-		withdrawal INT,
-		current INT
+		accrual INT DEFAULT 0,
+		withdrawal INT DEFAULT 0,
+		current INT DEFAULT 0
 	)`
 
 	if _, err := db.Exec(createOrdersTable); err != nil {
 		logger.Sugar.Fatalf("Error create orders table: %s", err)
+	}
+
+	dropTrigger := `DROP TRIGGER IF EXISTS update_current_trigger ON orders`
+	if _, err := db.Exec(dropTrigger); err != nil {
+		logger.Sugar.Fatalf("Error drop existing trigger: %s", err)
 	}
 
 	createTriggerFunction := `CREATE OR REPLACE FUNCTION update_current()

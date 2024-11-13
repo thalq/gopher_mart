@@ -30,6 +30,7 @@ func NewRouter(cfg *config.Config) http.Handler {
 		r.Post("/orders", orderHandler.UploadOrder)
 		r.Get("/orders", orderHandler.GetOrders)
 		r.Get("/balance", orderHandler.GetBalance)
+		r.Post("/balance/withdraw", orderHandler.WithdrawRequest)
 	})
 	return r
 }
