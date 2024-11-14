@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-chi/chi"
 	"github.com/thalq/gopher_mart/internal/constants"
 	logger "github.com/thalq/gopher_mart/internal/middleware"
 	"github.com/thalq/gopher_mart/internal/models"
@@ -177,6 +178,34 @@ func (h *OrderHandler) UserWithdrawls(w http.ResponseWriter, r *http.Request) {
 	}
 	logger.Sugar.Infof("Got %d withdrawls for user", len(withdrawls))
 	response, err := json.Marshal(withdrawls)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("content-type", "application/json")
+	w.Write(response)
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *OrderHandler) OrderAccrual(w http.ResponseWriter, r *http.Request) {
+	orderNumber := chi.URLParam(r, "number")
+	if orderNumber == "" {
+		http.Error(w, "Order number is required", http.StatusBadRequest)
+		return
+	}
+	logger.Sugar.Infof("Got request for order %s", orderNumber)
+
+	order, err := h.service.OrderAccrual(orderNumber)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if order.OrderID == "" {
+		http.Error(w, "Order not found", http.StatusNotFound)
+		return
+	}
+	logger.Sugar.Infof("Got order %s", orderNumber)
+	response, err := json.Marshal(order)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

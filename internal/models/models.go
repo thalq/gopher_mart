@@ -12,7 +12,7 @@ type Claims struct {
 }
 
 type Order struct {
-	OrderId    string    `json:"order_id"`
+	OrderID    string    `json:"order_id"`
 	Status     string    `json:"status"`
 	UploadTime time.Time `json:"upload_time"`
 }
@@ -28,7 +28,13 @@ type WithdrawRequest struct {
 }
 
 type WithdrawResponse struct {
-	OrderId     string    `json:"order"`
+	OrderID     string    `json:"order"`
 	Sum         int64     `json:"sum"`
 	ProcessedAt time.Time `json:"processed_at"`
+}
+
+type AccrualInfo struct {
+	OrderID string `json:"order"`
+	Status  string `json:"status"`
+	Accrual int64  `json:"accrual"`
 }

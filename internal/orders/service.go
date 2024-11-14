@@ -49,7 +49,7 @@ func (s *OrderService) GetOrders(userID int64) ([]models.Order, error) {
 	var orders []models.Order
 	for rows.Next() {
 		var order models.Order
-		if err := rows.Scan(&order.OrderId, &order.Status, &order.UploadTime); err != nil {
+		if err := rows.Scan(&order.OrderID, &order.Status, &order.UploadTime); err != nil {
 			return nil, err
 		}
 		orders = append(orders, order)
@@ -120,7 +120,7 @@ func (s *OrderService) GetUserWithdrawls(userID int64) ([]models.WithdrawRespons
 	var withdrawls []models.WithdrawResponse
 	for rows.Next() {
 		var withdrawl models.WithdrawResponse
-		if err := rows.Scan(&withdrawl.OrderId, &withdrawl.Sum, &withdrawl.ProcessedAt); err != nil {
+		if err := rows.Scan(&withdrawl.OrderID, &withdrawl.Sum, &withdrawl.ProcessedAt); err != nil {
 			return nil, err
 		}
 		withdrawls = append(withdrawls, withdrawl)
@@ -132,4 +132,14 @@ func (s *OrderService) GetUserWithdrawls(userID int64) ([]models.WithdrawRespons
 	logger.Sugar.Infof("Got withdrawls for user %d: %v", userID, withdrawls)
 
 	return withdrawls, nil
+}
+
+func (s *OrderService) OrderAccrual(orderNumber string) (models.AccrualInfo, error) {
+	var accrual models.AccrualInfo
+	if err := s.db.QueryRow("SELECT order_id, status, accrual FROM orders WHERE order_id = $1", orderNumber).Scan(&accrual.OrderID, &accrual.Status, &accrual.Accrual); err != nil {
+		return accrual, err
+	}
+	logger.Sugar.Infof("Got accrual for order %s: %v", orderNumber, accrual)
+
+	return accrual, nil
 }
