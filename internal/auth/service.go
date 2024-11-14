@@ -49,20 +49,24 @@ func (s *AuthService) CheckUserExists(username string) (bool, error) {
 }
 
 func (s *AuthService) Register(login, password string) (int64, error) {
+	var userID int64
 	hash, err := s.HashPassword(password)
 	if err != nil {
 		return 0, err
 	}
-	result, err := s.db.Exec("INSERT INTO users (username, password) VALUES ($1, $2)", login, hash)
+	err = s.db.QueryRow(
+		"INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id",
+		login, hash,
+	).Scan(&userID)
 	if err != nil {
 		logger.Sugar.Errorf("Error insert user to db: %s", err)
 		return 0, err
 	}
-	userID, err := result.LastInsertId()
-	if err != nil {
-		logger.Sugar.Errorf("Error getting last insert ID: %s", err)
-		return 0, err
-	}
+	// userID, err := result.LastInsertId()
+	// if err != nil {
+	// 	logger.Sugar.Errorf("Error getting last insert ID: %s", err)
+	// 	return 0, err
+	// }
 	return userID, nil
 }
 
