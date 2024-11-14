@@ -23,9 +23,10 @@ func getEnv(value string, defaultValue string) string {
 func NewConfig() *Config {
 	defaultRunAdress := "localhost:8080"
 	defaultDatabaseURI := "postgres://postgres:postgres@localhost/postgres?sslmode=disable"
+	defaultAccrualAddress := "/Users/tanya/go/src/github.com/thalq/gopher_mart/cmd/accrual/accrual_darwin_arm64"
 	envRunAddress := getEnv("RUN_ADDRESS", defaultRunAdress)
 	envDatabaseURI := getEnv("DATABASE_URI", defaultDatabaseURI)
-	envAccrualSystemAddress := getEnv("ACCRUAL_SYSTEM_ADDRESS", "")
+	envAccrualSystemAddress := getEnv("ACCRUAL_SYSTEM_ADDRESS", defaultAccrualAddress)
 
 	logger.Sugar.Infof("Run address: %s, Database URI: %s, Accrual system address: %s", envRunAddress, envDatabaseURI, envAccrualSystemAddress)
 

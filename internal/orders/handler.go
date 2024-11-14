@@ -143,11 +143,13 @@ func (h *OrderHandler) WithdrawRequest(w http.ResponseWriter, r *http.Request) {
 	var request models.WithdrawRequest
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
+		logger.Sugar.Errorf("Failed to read request body: %v", err)
 		http.Error(w, "Failed to read request body", http.StatusBadRequest)
 		return
 	}
 	defer r.Body.Close()
 	if err := json.Unmarshal(body, &request); err != nil {
+		logger.Sugar.Errorf("Failed to unmarshal request: %v", err)
 		http.Error(w, "Failed to unmarshal request", http.StatusBadRequest)
 		return
 	}
