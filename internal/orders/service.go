@@ -82,7 +82,7 @@ func (s *OrderService) WithdrawRequest(userID int64, orderId string, sum int64) 
 
 	var currentBalance sql.NullInt64
 
-	if err := tx.QueryRow("SELECT accrual FROM orders WHERE user_id = $1 AND order_id = $2", userID, orderId).Scan(&currentBalance); err != nil {
+	if err := tx.QueryRow("SELECT current FROM orders WHERE user_id = $1 AND order_id = $2", userID, orderId).Scan(&currentBalance); err != nil {
 		if err == sql.ErrNoRows {
 			logger.Sugar.Errorf("Order %s not found for user %d", orderId, userID)
 			return http.StatusUnprocessableEntity
@@ -110,27 +110,26 @@ func (s *OrderService) WithdrawRequest(userID int64, orderId string, sum int64) 
 	return http.StatusOK
 }
 
-// func (s *OrderService) WithdrawRequest(userID int64, orderId string, sum int64) int {
-// 	var currentBalance sql.NullInt64
-// 	if err := s.db.QueryRow("SELECT accrual FROM orders WHERE user_id = $1 AND order_id = $2", userID, orderId).Scan(&currentBalance); err != nil {
-// 		if err == sql.ErrNoRows {
-// 			logger.Sugar.Errorf("Order %s not found for user %d", orderId, userID)
-// 			return http.StatusUnprocessableEntity
-// 		}
-// 		logger.Sugar.Errorf("Failed to get current balance: %v", err)
-// 		return http.StatusInternalServerError
-// 	}
-// 	if !currentBalance.Valid || currentBalance.Int64 < sum {
-// 		logger.Sugar.Errorf("Not enough money for user %d", userID)
-// 		return http.StatusPaymentRequired
-// 	}
+func (s *OrderService) GetUserWithdrawls(userID int64) ([]models.WithdrawResponse, error) {
+	rows, err := s.db.Query("SELECT order_id, withdrawal, upload_time FROM orders WHERE user_id = $1", userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
-// 	_, err := s.db.Exec("UPDATE orders SET withdrawal = withdrawal + $1 WHERE user_id = $2 AND order_id = $3", sum, userID, orderId)
-// 	if err != nil {
-// 		logger.Sugar.Errorf("Failed to withdraw: %v", err)
-// 		return http.StatusInternalServerError
-// 	}
+	var withdrawls []models.WithdrawResponse
+	for rows.Next() {
+		var withdrawl models.WithdrawResponse
+		if err := rows.Scan(&withdrawl.OrderId, &withdrawl.Sum, &withdrawl.ProcessedAt); err != nil {
+			return nil, err
+		}
+		withdrawls = append(withdrawls, withdrawl)
+	}
+	if err = rows.Err(); err != nil {
+		logger.Sugar.Errorf("Failed to iterate over rows: %v", err)
+		return nil, err
+	}
+	logger.Sugar.Infof("Got withdrawls for user %d: %v", userID, withdrawls)
 
-// 	logger.Sugar.Infof("Withdraw %d for user %d", sum, userID)
-// 	return http.StatusOK
-// }
+	return withdrawls, nil
+}

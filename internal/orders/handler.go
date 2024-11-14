@@ -155,3 +155,33 @@ func (h *OrderHandler) WithdrawRequest(w http.ResponseWriter, r *http.Request) {
 	response := h.service.WithdrawRequest(userID, request.Order, request.Sum)
 	w.WriteHeader(response)
 }
+
+func (h *OrderHandler) UserWithdrawls(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	userID, ok := ctx.Value(constants.UserIDKey).(int64)
+	if !ok {
+		http.Error(w, "User unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	withdrawls, err := h.service.GetUserWithdrawls(userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if len(withdrawls) == 0 {
+		http.Error(w, "No withdrawls for user", http.StatusNoContent)
+		return
+	}
+	logger.Sugar.Infof("Got %d withdrawls for user", len(withdrawls))
+	response, err := json.Marshal(withdrawls)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("content-type", "application/json")
+	w.Write(response)
+	w.WriteHeader(http.StatusOK)
+}
