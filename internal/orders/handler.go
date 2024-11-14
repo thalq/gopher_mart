@@ -40,10 +40,10 @@ func (h *OrderHandler) UploadOrder(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	orderNumber := strings.TrimSpace(string(body))
 
-	// if !ValidateOrderNumber(orderNumber) {
-	// 	http.Error(w, "Invalid order number", http.StatusBadRequest)
-	// 	return
-	// }
+	if !ValidateOrderNumber(orderNumber) {
+		http.Error(w, "Invalid order number", http.StatusBadRequest)
+		return
+	}
 	userHasOrder, err := h.service.CheckUserHasOrders(userID, orderNumber)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

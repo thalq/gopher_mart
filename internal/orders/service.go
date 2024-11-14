@@ -73,14 +73,14 @@ func (s *OrderService) GetBalance(userID int64) (models.Balance, error) {
 	return balance, nil
 }
 
-func (s *OrderService) WithdrawRequest(userID int64, orderId string, sum int64) int {
+func (s *OrderService) WithdrawRequest(userID int64, orderId string, sum float32) int {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return http.StatusBadRequest
 	}
 	defer tx.Rollback()
 
-	var currentBalance sql.NullInt64
+	var currentBalance sql.NullFloat64
 
 	if err := tx.QueryRow("SELECT current FROM orders WHERE user_id = $1 AND order_id = $2", userID, orderId).Scan(&currentBalance); err != nil {
 		if err == sql.ErrNoRows {
@@ -90,7 +90,7 @@ func (s *OrderService) WithdrawRequest(userID int64, orderId string, sum int64) 
 		logger.Sugar.Errorf("Failed to get current balance: %v", err)
 		return http.StatusInternalServerError
 	}
-	if !currentBalance.Valid || currentBalance.Int64 < sum {
+	if !currentBalance.Valid || float32(currentBalance.Float64) < sum {
 		logger.Sugar.Errorf("Not enough money for user %d", userID)
 		return http.StatusPaymentRequired
 	}

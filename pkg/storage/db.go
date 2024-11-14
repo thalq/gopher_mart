@@ -32,9 +32,9 @@ func InitDB(connectionString string) {
 		order_id VARCHAR(255),
 		status VARCHAR(10) DEFAULT 'NEW' CHECK (status IN ('NEW', 'PROCESSING', 'INVALID', 'PROCESSED')),
 		upload_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-		accrual INT DEFAULT 0,
-		withdrawal INT DEFAULT 0,
-		current INT DEFAULT 0
+		accrual FLOAT DEFAULT 0.0,
+		withdrawal FLOAT DEFAULT 0.0,
+		current FLOAT DEFAULT 0.0
 	)`
 
 	if _, err := db.Exec(createOrdersTable); err != nil {
