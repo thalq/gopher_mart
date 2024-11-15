@@ -95,7 +95,7 @@ func (s *OrderService) WithdrawRequest(userID int64, orderId string, sum float32
 		return http.StatusPaymentRequired
 	}
 
-	_, err = tx.Exec("UPDATE orders SET withdrawal = withdrawal + $1 WHERE user_id = $2 AND order_id = $3", sum, userID, orderId)
+	_, err = tx.Exec("UPDATE orders SET current = current - $1, withdrawal = withdrawal + $1 WHERE user_id = $2 AND order_id = $3", sum, userID, orderId)
 	if err != nil {
 		logger.Sugar.Errorf("Failed to withdraw: %v", err)
 		return http.StatusInternalServerError

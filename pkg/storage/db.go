@@ -41,30 +41,30 @@ func InitDB(connectionString string) {
 		logger.Sugar.Fatalf("Error create orders table: %s", err)
 	}
 
-	dropTrigger := `DROP TRIGGER IF EXISTS update_current_trigger ON orders`
-	if _, err := db.Exec(dropTrigger); err != nil {
-		logger.Sugar.Fatalf("Error drop existing trigger: %s", err)
-	}
+	// dropTrigger := `DROP TRIGGER IF EXISTS update_current_trigger ON orders`
+	// if _, err := db.Exec(dropTrigger); err != nil {
+	// 	logger.Sugar.Fatalf("Error drop existing trigger: %s", err)
+	// }
 
-	createTriggerFunction := `CREATE OR REPLACE FUNCTION update_current()
-	RETURNS TRIGGER AS $$
-	BEGIN
-		NEW.current := NEW.accrual - NEW.withdrawal;
-		RETURN NEW;
-	END;
-	$$ LANGUAGE plpgsql;`
+	// createTriggerFunction := `CREATE OR REPLACE FUNCTION update_current()
+	// RETURNS TRIGGER AS $$
+	// BEGIN
+	// 	NEW.current := NEW.accrual - NEW.withdrawal;
+	// 	RETURN NEW;
+	// END;
+	// $$ LANGUAGE plpgsql;`
 
-	if _, err := db.Exec(createTriggerFunction); err != nil {
-		logger.Sugar.Fatalf("Error create trigger function: %s", err)
-	}
+	// if _, err := db.Exec(createTriggerFunction); err != nil {
+	// 	logger.Sugar.Fatalf("Error create trigger function: %s", err)
+	// }
 
-	createTrigger := `CREATE TRIGGER update_current_trigger
-	BEFORE INSERT OR UPDATE ON orders
-	FOR EACH ROW EXECUTE FUNCTION update_current();`
+	// createTrigger := `CREATE TRIGGER update_current_trigger
+	// BEFORE INSERT OR UPDATE ON orders
+	// FOR EACH ROW EXECUTE FUNCTION update_current();`
 
-	if _, err := db.Exec(createTrigger); err != nil {
-		logger.Sugar.Fatalf("Error create trigger: %s", err)
-	}
+	// if _, err := db.Exec(createTrigger); err != nil {
+	// 	logger.Sugar.Fatalf("Error create trigger: %s", err)
+	// }
 
 	logger.Sugar.Info("DB connected")
 }
