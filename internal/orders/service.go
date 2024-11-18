@@ -82,7 +82,7 @@ func (s *OrderService) WithdrawRequest(userID int64, orderId string, sum float32
 
 	var currentBalance sql.NullFloat64
 
-	if err := tx.QueryRow("SELECT current FROM orders WHERE user_id = $1", userID, orderId).Scan(&currentBalance); err != nil {
+	if err := tx.QueryRow("SELECT SUM(current) FROM orders WHERE user_id = $1", userID).Scan(&currentBalance); err != nil {
 		if err == sql.ErrNoRows {
 			logger.Sugar.Errorf("Order %s not found for user %d", orderId, userID)
 			return http.StatusUnprocessableEntity
