@@ -80,20 +80,20 @@ func (s *OrderService) WithdrawRequest(userID int64, orderId string, sum float32
 	}
 	defer tx.Rollback()
 
-	var currentBalance sql.NullFloat64
+	// var currentBalance sql.NullFloat64
 
-	if err := tx.QueryRow("SELECT SUM(current) FROM orders WHERE user_id = $1", userID).Scan(&currentBalance); err != nil {
-		if err == sql.ErrNoRows {
-			logger.Sugar.Errorf("Order %s not found for user %d", orderId, userID)
-			return http.StatusUnprocessableEntity
-		}
-		logger.Sugar.Errorf("Failed to get current balance: %v", err)
-		return http.StatusInternalServerError
-	}
-	if !currentBalance.Valid || float32(currentBalance.Float64) < sum {
-		logger.Sugar.Errorf("Not enough money for user %d", userID)
-		return http.StatusPaymentRequired
-	}
+	// if err := tx.QueryRow("SELECT SUM(current) FROM orders WHERE user_id = $1", userID).Scan(&currentBalance); err != nil {
+	// 	if err == sql.ErrNoRows {
+	// 		logger.Sugar.Errorf("Order %s not found for user %d", orderId, userID)
+	// 		return http.StatusUnprocessableEntity
+	// 	}
+	// 	logger.Sugar.Errorf("Failed to get current balance: %v", err)
+	// 	return http.StatusInternalServerError
+	// }
+	// if !currentBalance.Valid || float32(currentBalance.Float64) < sum {
+	// 	logger.Sugar.Errorf("Not enough money for user %d", userID)
+	// 	return http.StatusPaymentRequired
+	// }
 
 	_, err = tx.Exec("INSERT INTO orders (user_id, order_id, withdrawal) VALUES ($1, $2, $3)", userID, orderId, sum)
 	if err != nil {
