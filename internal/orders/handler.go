@@ -41,7 +41,7 @@ func (h *OrderHandler) UploadOrder(w http.ResponseWriter, r *http.Request) {
 	orderNumber := strings.TrimSpace(string(body))
 
 	if !ValidateOrderNumber(orderNumber) {
-		http.Error(w, "Invalid order number", http.StatusBadRequest)
+		http.Error(w, "Invalid order number", http.StatusUnprocessableEntity)
 		return
 	}
 	userHasOrder, err := h.service.CheckUserHasOrders(userID, orderNumber)
@@ -154,6 +154,11 @@ func (h *OrderHandler) WithdrawRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	logger.Sugar.Infof("Got withdraw request: %v", request)
+
+	if !ValidateOrderNumber(request.Order) {
+		http.Error(w, "Invalid order number", http.StatusUnprocessableEntity)
+		return
+	}
 
 	response := h.service.WithdrawRequest(userID, request.Order, request.Sum)
 	w.WriteHeader(response)

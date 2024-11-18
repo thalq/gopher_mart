@@ -82,7 +82,7 @@ func (s *OrderService) WithdrawRequest(userID int64, orderId string, sum float32
 
 	var currentBalance sql.NullFloat64
 
-	if err := tx.QueryRow("SELECT current FROM orders WHERE user_id = $1 AND order_id = $2", userID, orderId).Scan(&currentBalance); err != nil {
+	if err := tx.QueryRow("SELECT current FROM orders WHERE user_id = $1", userID, orderId).Scan(&currentBalance); err != nil {
 		if err == sql.ErrNoRows {
 			logger.Sugar.Errorf("Order %s not found for user %d", orderId, userID)
 			return http.StatusUnprocessableEntity
@@ -95,11 +95,17 @@ func (s *OrderService) WithdrawRequest(userID int64, orderId string, sum float32
 		return http.StatusPaymentRequired
 	}
 
-	_, err = tx.Exec("UPDATE orders SET withdrawal = withdrawal + $1 WHERE user_id = $2 AND order_id = $3", sum, userID, orderId)
+	_, err = tx.Exec("INSERT INTO orders (user_id, order_id, withdrawal) VALUES ($1, $2, $3)", userID, orderId, sum)
 	if err != nil {
-		logger.Sugar.Errorf("Failed to withdraw: %v", err)
+		logger.Sugar.Errorf("Failed to insert order: %v", err)
 		return http.StatusInternalServerError
 	}
+
+	// _, err = tx.Exec("UPDATE orders SET withdrawal = withdrawal + $1 WHERE user_id = $2 AND order_id = $3", sum, userID, orderId)
+	// if err != nil {
+	// 	logger.Sugar.Errorf("Failed to withdraw: %v", err)
+	// 	return http.StatusInternalServerError
+	// }
 
 	if err = tx.Commit(); err != nil {
 		logger.Sugar.Errorf("Failed to commit transaction: %v", err)
