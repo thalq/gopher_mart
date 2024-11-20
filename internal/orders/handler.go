@@ -15,11 +15,12 @@ import (
 )
 
 type OrderHandler struct {
-	service *OrderService
+	service              *OrderService
+	AccrualSystemAddress string
 }
 
-func NewOrderHandler(service *OrderService) *OrderHandler {
-	return &OrderHandler{service: service}
+func NewOrderHandler(service *OrderService, AccrualSystemAddress string) *OrderHandler {
+	return &OrderHandler{service: service, AccrualSystemAddress: AccrualSystemAddress}
 }
 
 func (h *OrderHandler) UploadOrder(w http.ResponseWriter, r *http.Request) {
@@ -68,9 +69,24 @@ func (h *OrderHandler) UploadOrder(w http.ResponseWriter, r *http.Request) {
 			}
 			w.WriteHeader(http.StatusAccepted)
 			logger.Sugar.Infof("User %s created order %s", userID, orderNumber)
+
+			go func(orderNumber string) {
+				url := h.AccrualSystemAddress + "/api/orders/" + orderNumber
+				resp, err := http.Get(url)
+				if err != nil {
+					logger.Sugar.Errorf("Failed to send request to accrual system: %v", err)
+					return
+				}
+				defer resp.Body.Close()
+				if resp.StatusCode != http.StatusNoContent {
+					logger.Sugar.Errorf("Failed to get order from accrual system: %v", resp.Status)
+					return
+				} else {
+					logger.Sugar.Infof("Successfully got order from accrual system: %v", resp.Status)
+				}
+			}(orderNumber)
 		}
 	}
-
 }
 
 func (h *OrderHandler) GetOrders(w http.ResponseWriter, r *http.Request) {

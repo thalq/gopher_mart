@@ -23,7 +23,7 @@ func NewRouter(cfg *config.Config) http.Handler {
 	authService := auth.NewAuthService(db, constants.JWTSecret)
 	authHandler := auth.NewAuthHandler(authService)
 	orderService := orders.NewOrderService(db)
-	orderHandler := orders.NewOrderHandler(orderService)
+	orderHandler := orders.NewOrderHandler(orderService, cfg.AccrualSystemAddress)
 	r.Route("/api/user", func(r chi.Router) {
 		r.Post("/register", authHandler.Register)
 		r.Post("/login", authHandler.Login)
@@ -33,6 +33,6 @@ func NewRouter(cfg *config.Config) http.Handler {
 		r.Post("/balance/withdraw", orderHandler.WithdrawRequest)
 		r.Get("/withdrawals", orderHandler.UserWithdrawls)
 	})
-	r.Get("/api/orders/{number}", orderHandler.OrderAccrual)
+	// r.Get("/api/orders/{number}", orderHandler.OrderAccrual)
 	return r
 }
