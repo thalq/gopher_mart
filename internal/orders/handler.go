@@ -178,7 +178,24 @@ func (h *OrderHandler) WithdrawRequest(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid order number", http.StatusUnprocessableEntity)
 		return
 	}
-
+	go func(orderNumber string) {
+		url := h.AccrualSystemAddress + "/api/orders/" + orderNumber
+		resp, err := http.Get(url)
+		if err != nil {
+			logger.Sugar.Errorf("Failed to send request to accrual system: %v", err)
+			return
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode == http.StatusOK {
+			logger.Sugar.Infof("Order %s was successfully accrued", orderNumber)
+		} else if resp.StatusCode == http.StatusNotFound {
+			logger.Sugar.Infof("Order %s not found", orderNumber)
+		} else if resp.StatusCode == http.StatusTooManyRequests {
+			logger.Sugar.Infof("Too many requests to accrual system")
+		} else if resp.StatusCode == http.StatusInternalServerError {
+			logger.Sugar.Infof("Internal server error in accrual system")
+		}
+	}(request.Order)
 	response := h.service.WithdrawRequest(userID, request.Order, request.Sum)
 	w.WriteHeader(response)
 }
