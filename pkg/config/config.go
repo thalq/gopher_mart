@@ -21,10 +21,10 @@ func getEnv(value string, defaultValue string) string {
 }
 
 func NewConfig() *Config {
-	// defaultRunAdress := "localhost:8081"
-	// defaultDatabaseURI := "postgres://postgres:postgres@localhost/postgres?sslmode=disable"
-	envRunAddress := getEnv("RUN_ADDRESS", "")
-	envDatabaseURI := getEnv("DATABASE_URI", "")
+	defaultRunAdress := "localhost:8081"
+	defaultDatabaseURI := "postgres://postgres:postgres@localhost/postgres?sslmode=disable"
+	envRunAddress := getEnv("RUN_ADDRESS", defaultRunAdress)
+	envDatabaseURI := getEnv("DATABASE_URI", defaultDatabaseURI)
 	envAccrualSystemAddress := getEnv("ACCRUAL_SYSTEM_ADDRESS", "")
 
 	runAddress := flag.String("a", envRunAddress, "address to run server")

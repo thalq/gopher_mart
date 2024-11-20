@@ -78,11 +78,14 @@ func (h *OrderHandler) UploadOrder(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				defer resp.Body.Close()
-				if resp.StatusCode != http.StatusNoContent {
-					logger.Sugar.Errorf("Failed to get order from accrual system: %v", resp.Status)
-					return
-				} else {
-					logger.Sugar.Infof("Successfully got order from accrual system: %v", resp.Status)
+				if resp.StatusCode == http.StatusOK {
+					logger.Sugar.Infof("Order %s was successfully accrued", orderNumber)
+				} else if resp.StatusCode == http.StatusNotFound {
+					logger.Sugar.Infof("Order %s not found", orderNumber)
+				} else if resp.StatusCode == http.StatusTooManyRequests {
+					logger.Sugar.Infof("Too many requests to accrual system")
+				} else if resp.StatusCode == http.StatusInternalServerError {
+					logger.Sugar.Infof("Internal server error in accrual system")
 				}
 			}(orderNumber)
 		}
