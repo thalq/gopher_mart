@@ -38,3 +38,12 @@ type AccrualInfo struct {
 	Status  string  `json:"status"`
 	Accrual float32 `json:"accrual"`
 }
+
+func (a *AccrualInfo) SetDefaults(orderID string) {
+	if a.Status == "" {
+		a.Status = "NEW"
+	}
+	if a.Accrual == 0 {
+		a.Accrual = 0.0
+	}
+}

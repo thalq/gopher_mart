@@ -33,6 +33,5 @@ func NewRouter(cfg *config.Config) http.Handler {
 		r.Post("/balance/withdraw", orderHandler.WithdrawRequest)
 		r.Get("/withdrawals", orderHandler.UserWithdrawls)
 	})
-	// r.Get("/api/orders/{number}", orderHandler.OrderAccrual)
 	return r
 }
