@@ -25,7 +25,7 @@ func NewConfig() *Config {
 	defaultDatabaseURI := "postgres://postgres:postgres@localhost/postgres?sslmode=disable"
 	envRunAddress := getEnv("RUN_ADDRESS", defaultRunAdress)
 	envDatabaseURI := getEnv("DATABASE_URI", defaultDatabaseURI)
-	envAccrualSystemAddress := getEnv("ACCRUAL_SYSTEM_ADDRESS", "")
+	envAccrualSystemAddress := getEnv("ACCRUAL_SYSTEM_ADDRESS", "http://localhost:8080")
 
 	runAddress := flag.String("a", envRunAddress, "address to run server")
 	databaseURI := flag.String("d", envDatabaseURI, "database URI")

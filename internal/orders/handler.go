@@ -71,6 +71,7 @@ func (h *OrderHandler) UploadOrder(w http.ResponseWriter, r *http.Request) {
 					close(accrualInfoChan)
 					return
 				}
+				logger.Sugar.Infof("Got response from accrual system: %v", resp)
 				defer resp.Body.Close()
 				var accrualInfo models.AccrualInfo
 				if resp.StatusCode == http.StatusOK {

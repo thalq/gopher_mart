@@ -62,12 +62,19 @@ func (s *AuthService) Register(login, password string) (int64, error) {
 		logger.Sugar.Errorf("Error insert user to db: %s", err)
 		return 0, err
 	}
-	// userID, err := result.LastInsertId()
-	// if err != nil {
-	// 	logger.Sugar.Errorf("Error getting last insert ID: %s", err)
-	// 	return 0, err
-	// }
 	return userID, nil
+}
+
+func (s *AuthService) CreateUserBalance(userID int64) error {
+	_, err := s.db.Exec(`
+		INSERT INTO user_balance (user_id, current_balance)
+		VALUES ($1, 0.0)
+	`, userID)
+	if err != nil {
+		logger.Sugar.Errorf("Error insert user balance to db: %s", err)
+		return err
+	}
+	return nil
 }
 
 func (s *AuthService) Authenticate(login, password string) (bool, int64, error) {

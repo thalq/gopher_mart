@@ -64,6 +64,13 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	logger.Sugar.Infof("User %s registered", req.Login)
+
+	if err := h.service.CreateUserBalance(userID); err != nil {
+		http.Error(w, "Failed to create user balance account", http.StatusInternalServerError)
+		return
+	}
+	logger.Sugar.Infof("User balance account created for user %s", req.Login)
 
 	token := h.service.GenerateToken(userID)
 	http.SetCookie(w, &http.Cookie{
