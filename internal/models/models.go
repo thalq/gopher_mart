@@ -15,6 +15,7 @@ type Order struct {
 	Number     string    `json:"number"`
 	Status     string    `json:"status"`
 	UploadedAt time.Time `json:"uploaded_at"`
+	Accrual    float32   `json:"accrual"`
 }
 
 type Balance struct {

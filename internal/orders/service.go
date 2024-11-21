@@ -35,10 +35,11 @@ func (s *OrderService) CreateOrder(
 		return err
 	}
 	_, err = tx.Exec(
-		"INSERT INTO orders (user_id, order_id, status) VALUES ($1, $2, $3)",
+		"INSERT INTO orders (user_id, order_id, status, accrual) VALUES ($1, $2, $3, $4)",
 		userID,
 		orderNumber,
 		accrualInfo.Status,
+		accrualInfo.Accrual,
 	)
 	if err != nil {
 		logger.Sugar.Errorf("Failed to insert order: %v", err)
@@ -71,7 +72,7 @@ func (s *OrderService) CheckOtherUserHasOrders(orderNumber string) (bool, error)
 
 func (s *OrderService) GetOrders(userID int64) ([]models.Order, error) {
 	rows, err := s.db.Query(
-		"SELECT order_id, status, upload_time FROM orders WHERE user_id = $1 ORDER BY upload_time DESC",
+		"SELECT order_id, status, upload_time, accrual FROM orders WHERE user_id = $1 ORDER BY upload_time DESC",
 		userID,
 	)
 	if err != nil {
@@ -82,7 +83,7 @@ func (s *OrderService) GetOrders(userID int64) ([]models.Order, error) {
 	var orders []models.Order
 	for rows.Next() {
 		var order models.Order
-		if err := rows.Scan(&order.Number, &order.Status, &order.UploadedAt); err != nil {
+		if err := rows.Scan(&order.Number, &order.Status, &order.UploadedAt, &order.Accrual); err != nil {
 			return nil, err
 		}
 		orders = append(orders, order)
@@ -145,11 +146,12 @@ func (s *OrderService) WithdrawRequest(
 	}
 
 	_, err = tx.Exec(
-		"INSERT INTO orders (user_id, order_id, withdrawal, status) VALUES ($1, $2, $3, $4)",
+		"INSERT INTO orders (user_id, order_id, withdrawal, status, accrual) VALUES ($1, $2, $3, $4, $5)",
 		userID,
 		orderId,
 		sum,
 		accrualInfo.Status,
+		accrualInfo.Accrual,
 	)
 	if err != nil {
 		logger.Sugar.Errorf("Failed to insert order: %v", err)

@@ -30,7 +30,8 @@ func InitDB(connectionString string) {
         order_id VARCHAR(255),
         status VARCHAR(10) DEFAULT 'NEW' CHECK (status IN ('NEW', 'PROCESSING', 'INVALID', 'PROCESSED')),
         upload_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        withdrawal FLOAT DEFAULT 0.0
+        withdrawal FLOAT DEFAULT 0.0,
+		accrual FLOAT DEFAULT 0.0
     );
     CREATE TABLE IF NOT EXISTS user_balance (
         user_id INT UNIQUE REFERENCES users(id),
