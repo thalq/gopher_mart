@@ -82,7 +82,7 @@ func (s *OrderService) GetOrders(userID int64) ([]models.Order, error) {
 	var orders []models.Order
 	for rows.Next() {
 		var order models.Order
-		if err := rows.Scan(&order.OrderID, &order.Status, &order.UploadTime); err != nil {
+		if err := rows.Scan(&order.Number, &order.Status, &order.UploadedAt); err != nil {
 			return nil, err
 		}
 		orders = append(orders, order)

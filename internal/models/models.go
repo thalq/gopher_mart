@@ -12,9 +12,9 @@ type Claims struct {
 }
 
 type Order struct {
-	OrderID    string    `json:"order_id"`
+	Number     string    `json:"number"`
 	Status     string    `json:"status"`
-	UploadTime time.Time `json:"upload_time"`
+	UploadedAt time.Time `json:"uploaded_at"`
 }
 
 type Balance struct {
