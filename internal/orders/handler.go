@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/thalq/gopher_mart/internal/constants"
+	"github.com/thalq/gopher_mart/internal/errors"
 	logger "github.com/thalq/gopher_mart/internal/middleware"
 	"github.com/thalq/gopher_mart/internal/models"
 )
@@ -16,6 +17,44 @@ import (
 type OrderHandler struct {
 	service              *OrderService
 	AccrualSystemAddress string
+}
+
+func fetchAccrualInfo(orderNumber string, AccrualSystemAddress string) (models.AccrualInfo, error) {
+	url := AccrualSystemAddress + "/api/orders/" + orderNumber
+	resp, err := http.Get(url)
+	if err != nil {
+		logger.Sugar.Errorf("Failed to send request to accrual system: %v", err)
+		return models.AccrualInfo{}, err
+	}
+	logger.Sugar.Infof("Got response from accrual system: %v", resp)
+
+	defer resp.Body.Close()
+
+	var accrualInfo models.AccrualInfo
+	if resp.StatusCode == http.StatusOK {
+		logger.Sugar.Infof("Order %s was successfully accrued", orderNumber)
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			logger.Sugar.Errorf("Failed to read response body: %v", err)
+			return models.AccrualInfo{}, err
+		}
+		if err := json.Unmarshal(body, &accrualInfo); err != nil {
+			logger.Sugar.Errorf("Failed to unmarshal response: %v", err)
+			return models.AccrualInfo{}, err
+		}
+		logger.Sugar.Infof("Got accrual info: %v", accrualInfo)
+	} else if resp.StatusCode == http.StatusNoContent {
+		accrualInfo.SetDefaults(orderNumber)
+		logger.Sugar.Infof("Order %s not found", orderNumber)
+	} else if resp.StatusCode == http.StatusTooManyRequests {
+		logger.Sugar.Infof("Too many requests to accrual system")
+		return models.AccrualInfo{}, errors.TooManyRequestsError
+	} else if resp.StatusCode == http.StatusInternalServerError {
+		logger.Sugar.Infof("Internal server error in accrual system")
+		return models.AccrualInfo{}, errors.InternalServerError
+	}
+	logger.Sugar.Infof("Order %s was successfully accrued", orderNumber)
+	return accrualInfo, nil
 }
 
 func NewOrderHandler(service *OrderService, AccrualSystemAddress string) *OrderHandler {
@@ -64,43 +103,11 @@ func (h *OrderHandler) UploadOrder(w http.ResponseWriter, r *http.Request) {
 		} else {
 			accrualInfoChan := make(chan models.AccrualInfo)
 			go func(orderNumber string) {
-				url := h.AccrualSystemAddress + "/api/orders/" + orderNumber
-				resp, err := http.Get(url)
+				accrualInfo, err := fetchAccrualInfo(orderNumber, h.AccrualSystemAddress)
 				if err != nil {
-					logger.Sugar.Errorf("Failed to send request to accrual system: %v", err)
 					close(accrualInfoChan)
 					return
 				}
-				logger.Sugar.Infof("Got response from accrual system: %v", resp)
-				defer resp.Body.Close()
-				var accrualInfo models.AccrualInfo
-				if resp.StatusCode == http.StatusOK {
-					logger.Sugar.Infof("Order %s was successfully accrued", orderNumber)
-					body, err := io.ReadAll(resp.Body)
-					if err != nil {
-						logger.Sugar.Errorf("Failed to read response body: %v", err)
-						close(accrualInfoChan)
-						return
-					}
-					if err := json.Unmarshal(body, &accrualInfo); err != nil {
-						logger.Sugar.Errorf("Failed to unmarshal response: %v", err)
-						close(accrualInfoChan)
-						return
-					}
-					logger.Sugar.Infof("Got accrual info: %v", accrualInfo)
-				} else if resp.StatusCode == http.StatusNoContent {
-					accrualInfo.SetDefaults(orderNumber)
-					logger.Sugar.Infof("Order %s not found", orderNumber)
-				} else if resp.StatusCode == http.StatusTooManyRequests {
-					logger.Sugar.Infof("Too many requests to accrual system")
-					close(accrualInfoChan)
-					return
-				} else if resp.StatusCode == http.StatusInternalServerError {
-					logger.Sugar.Infof("Internal server error in accrual system")
-					close(accrualInfoChan)
-					return
-				}
-				logger.Sugar.Infof("Order %s was successfully accrued", orderNumber)
 				accrualInfoChan <- accrualInfo
 				close(accrualInfoChan)
 			}(orderNumber)
@@ -209,42 +216,11 @@ func (h *OrderHandler) WithdrawRequest(w http.ResponseWriter, r *http.Request) {
 	}
 	accrualInfoChan := make(chan models.AccrualInfo)
 	go func(orderNumber string) {
-		url := h.AccrualSystemAddress + "/api/orders/" + orderNumber
-		resp, err := http.Get(url)
+		accrualInfo, err := fetchAccrualInfo(orderNumber, h.AccrualSystemAddress)
 		if err != nil {
-			logger.Sugar.Errorf("Failed to send request to accrual system: %v", err)
 			close(accrualInfoChan)
 			return
 		}
-		defer resp.Body.Close()
-		var accrualInfo models.AccrualInfo
-		if resp.StatusCode == http.StatusOK {
-			logger.Sugar.Infof("Order %s was successfully accrued", orderNumber)
-			body, err := io.ReadAll(resp.Body)
-			if err != nil {
-				logger.Sugar.Errorf("Failed to read response body: %v", err)
-				close(accrualInfoChan)
-				return
-			}
-			if err := json.Unmarshal(body, &accrualInfo); err != nil {
-				logger.Sugar.Errorf("Failed to unmarshal response: %v", err)
-				close(accrualInfoChan)
-				return
-			}
-			logger.Sugar.Infof("Got accrual info: %v", accrualInfo)
-		} else if resp.StatusCode == http.StatusNoContent {
-			accrualInfo.SetDefaults(orderNumber)
-			logger.Sugar.Infof("Order %s not found", orderNumber)
-		} else if resp.StatusCode == http.StatusTooManyRequests {
-			logger.Sugar.Infof("Too many requests to accrual system")
-			close(accrualInfoChan)
-			return
-		} else if resp.StatusCode == http.StatusInternalServerError {
-			logger.Sugar.Infof("Internal server error in accrual system")
-			close(accrualInfoChan)
-			return
-		}
-		logger.Sugar.Infof("Order %s was successfully accrued", orderNumber)
 		accrualInfoChan <- accrualInfo
 		close(accrualInfoChan)
 	}(request.Order)
