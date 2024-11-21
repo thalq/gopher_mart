@@ -31,7 +31,7 @@ func NewConfig() *Config {
 	databaseURI := flag.String("d", envDatabaseURI, "database URI")
 	accrualSystemAddress := flag.String("r", envAccrualSystemAddress, "accrual system address")
 
-	logger.Sugar.Infof("Run address: %s, Database URI: %s, Accrual system address: %s", runAddress, databaseURI, accrualSystemAddress)
+	logger.Sugar.Infof("Run address: %v, Database URI: %v, Accrual system address: %v", runAddress, databaseURI, accrualSystemAddress)
 
 	flag.Parse()
 

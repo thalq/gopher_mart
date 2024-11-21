@@ -57,7 +57,7 @@ func (s *OrderService) CreateOrder(
 		logger.Sugar.Errorf("Failed to commit transaction: %v", err)
 		return err
 	}
-	logger.Sugar.Infof("Order %s created for user %s", orderNumber, userID)
+	logger.Sugar.Infof("Order %s created for user %d", orderNumber, userID)
 	return nil
 }
 
@@ -177,7 +177,7 @@ func (s *OrderService) WithdrawRequest(
 
 func (s *OrderService) GetUserWithdrawls(userID int64) ([]models.WithdrawResponse, error) {
 	rows, err := s.db.Query(
-		"SELECT order_id, withdrawal, upload_time FROM orders WHERE user_id = $1",
+		"SELECT order_id, withdrawal, upload_time FROM orders WHERE user_id = $1 AND withdrawal > 0",
 		userID,
 	)
 	if err != nil {

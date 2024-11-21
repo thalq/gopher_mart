@@ -51,7 +51,7 @@ func (h *OrderHandler) UploadOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	if userHasOrder {
 		w.WriteHeader(http.StatusOK)
-		logger.Sugar.Infof("User %s has order %s", userID, orderNumber)
+		logger.Sugar.Infof("User %d has order %s", userID, orderNumber)
 	} else {
 		otherUserHasOrder, err := h.service.CheckOtherUserHasOrders(orderNumber)
 		if err != nil {
@@ -115,7 +115,7 @@ func (h *OrderHandler) UploadOrder(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			w.WriteHeader(http.StatusAccepted)
-			logger.Sugar.Infof("User %s created order %s", userID, orderNumber)
+			logger.Sugar.Infof("User %d created order %s", userID, orderNumber)
 
 		}
 	}
@@ -166,7 +166,7 @@ func (h *OrderHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	logger.Sugar.Infof("Got balance for user %s", userID)
+	logger.Sugar.Infof("Got balance for user %d", userID)
 	response, err := json.Marshal(balance)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -186,7 +186,7 @@ func (h *OrderHandler) WithdrawRequest(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "User unauthorized", http.StatusUnauthorized)
 		return
 	}
-	logger.Sugar.Infof("User %s requested withdraw", userID)
+	logger.Sugar.Infof("User %d requested withdraw", userID)
 
 	var request models.WithdrawRequest
 	body, err := io.ReadAll(r.Body)
