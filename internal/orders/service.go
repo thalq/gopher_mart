@@ -124,9 +124,14 @@ func (s *OrderService) WithdrawRequest(
 ) int {
 	tx, err := s.db.Begin()
 	if err != nil {
-		return http.StatusBadRequest
+		logger.Sugar.Errorf("Failed to begin transaction: %v", err)
+		return http.StatusInternalServerError
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
 
 	var balance float32
 	if err := tx.QueryRow("SELECT current_balance FROM user_balance WHERE user_id = $1", userID).Scan(&balance); err != nil {
@@ -150,17 +155,9 @@ func (s *OrderService) WithdrawRequest(
 		logger.Sugar.Errorf("Failed to insert order: %v", err)
 		return http.StatusInternalServerError
 	}
-
-	_, err = tx.Exec(`
-		INSERT INTO user_balance (user_id, current_balance)
-		VALUES ($1, $2)
-		ON CONFLICT (user_id) DO UPDATE SET current_balance = user_balance.current_balance + EXCLUDED.current_balance
-	`, userID, accrualInfo.Accrual)
-	if err != nil {
-		logger.Sugar.Info("Failed to upsert user balance: %v", err)
-	}
 	_, err = tx.Exec(
-		"UPDATE user_balance SET current_balance = current_balance - $1 WHERE user_id = $2",
+		"UPDATE user_balance SET current_balance = current_balance + $1 - $2 WHERE user_id = $3",
+		accrualInfo.Accrual,
 		sum,
 		userID,
 	)

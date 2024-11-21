@@ -33,7 +33,7 @@ func InitDB(connectionString string) {
         withdrawal FLOAT DEFAULT 0.0
     );
     CREATE TABLE IF NOT EXISTS user_balance (
-        user_id INT REFERENCES users(id),
+        user_id INT UNIQUE REFERENCES users(id),
         current_balance FLOAT DEFAULT 0.0
     );
     `
