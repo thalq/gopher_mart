@@ -25,10 +25,50 @@ func (s *OrderService) CheckUserHasOrders(userID int64, orderNumber string) (boo
 	return orderExists, nil
 }
 
-func (s *OrderService) CreateOrder(userID int64, orderNumber string, accrualInfo models.AccrualInfo) error {
-	_, err := s.db.Exec("INSERT INTO orders (user_id, order_id, status, accrual) VALUES ($1, $2, $3, $4)", userID, orderNumber, accrualInfo.Status, accrualInfo.Accrual)
-	logger.Sugar.Infof("Insert order %s for user %s", orderNumber, userID)
-	return err
+func (s *OrderService) CreateOrder(
+	userID int64,
+	orderNumber string,
+	accrualInfo models.AccrualInfo,
+) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec(
+		"INSERT INTO orders (user_id, order_id, status) VALUES ($1, $2, $3, $4)",
+		userID,
+		orderNumber,
+		accrualInfo.Status,
+		accrualInfo.Accrual,
+	)
+	if err != nil {
+		logger.Sugar.Errorf("Failed to insert order: %v", err)
+		return err
+	}
+	_, err = tx.Exec(`
+		INSERT INTO user_balance (user_id, current_balance)
+		VALUES ($1, 0.0)
+		ON CONFLICT (user_id) DO NOTHING
+	`, userID)
+	if err != nil {
+		logger.Sugar.Errorf("Failed to insert user balance: %v", err)
+		return err
+	}
+	_, err = tx.Exec(
+		"UPDATE user_balance SET current_balance = current_balance + $1 WHERE user_id = $2",
+		accrualInfo.Accrual,
+		userID,
+	)
+	if err != nil {
+		logger.Sugar.Errorf("Failed to update user balance: %v", err)
+		return err
+	}
+	if err = tx.Commit(); err != nil {
+		logger.Sugar.Errorf("Failed to commit transaction: %v", err)
+		return err
+	}
+	logger.Sugar.Infof("Order %s created for user %s", orderNumber, userID)
+	return nil
 }
 
 func (s *OrderService) CheckOtherUserHasOrders(orderNumber string) (bool, error) {
@@ -40,7 +80,10 @@ func (s *OrderService) CheckOtherUserHasOrders(orderNumber string) (bool, error)
 }
 
 func (s *OrderService) GetOrders(userID int64) ([]models.Order, error) {
-	rows, err := s.db.Query("SELECT order_id, status, upload_time FROM orders WHERE user_id = $1 ORDER BY upload_time DESC", userID)
+	rows, err := s.db.Query(
+		"SELECT order_id, status, upload_time FROM orders WHERE user_id = $1 ORDER BY upload_time DESC",
+		userID,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -73,21 +116,58 @@ func (s *OrderService) GetBalance(userID int64) (models.Balance, error) {
 	return balance, nil
 }
 
-func (s *OrderService) WithdrawRequest(userID int64, orderId string, sum float32, accrualInfo models.AccrualInfo) int {
+func (s *OrderService) WithdrawRequest(
+	userID int64,
+	orderId string,
+	sum float32,
+	accrualInfo models.AccrualInfo,
+) int {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return http.StatusBadRequest
 	}
 	defer tx.Rollback()
 
-	if accrualInfo.Accrual < sum {
+	var balance float32
+	if err := tx.QueryRow("SELECT current_balance FROM user_balance WHERE user_id = $1", userID).Scan(&balance); err != nil {
+		logger.Sugar.Errorf("Failed to get balance for user %d: %v", userID, err)
+		return http.StatusInternalServerError
+	}
+	balance += accrualInfo.Accrual
+	if balance < sum {
 		logger.Sugar.Errorf("Not enough money for user %d", userID)
 		return http.StatusPaymentRequired
 	}
 
-	_, err = tx.Exec("INSERT INTO orders (user_id, order_id, withdrawal, status, accrual) VALUES ($1, $2, $3, $4, $5)", userID, orderId, sum, accrualInfo.Status, accrualInfo.Accrual)
+	_, err = tx.Exec(
+		"INSERT INTO orders (user_id, order_id, withdrawal, status, accrual) VALUES ($1, $2, $3, $4, $5)",
+		userID,
+		orderId,
+		sum,
+		accrualInfo.Status,
+		accrualInfo.Accrual,
+	)
 	if err != nil {
 		logger.Sugar.Errorf("Failed to insert order: %v", err)
+		return http.StatusInternalServerError
+	}
+
+	_, err = tx.Exec(`
+		INSERT INTO user_balance (user_id, current_balance)
+		VALUES ($1, 0.0)
+		ON CONFLICT (user_id) DO NOTHING
+	`, userID)
+	if err != nil {
+		logger.Sugar.Errorf("Failed to insert user balance: %v", err)
+		return http.StatusInternalServerError
+	}
+	_, err = tx.Exec(
+		"UPDATE user_balance SET current_balance = current_balance - $1 WHERE user_id = $2",
+		sum,
+		userID,
+	)
+	if err != nil {
+		logger.Sugar.Errorf("Failed to update user balance: %v", err)
 		return http.StatusInternalServerError
 	}
 
@@ -101,7 +181,10 @@ func (s *OrderService) WithdrawRequest(userID int64, orderId string, sum float32
 }
 
 func (s *OrderService) GetUserWithdrawls(userID int64) ([]models.WithdrawResponse, error) {
-	rows, err := s.db.Query("SELECT order_id, withdrawal, upload_time FROM orders WHERE user_id = $1", userID)
+	rows, err := s.db.Query(
+		"SELECT order_id, withdrawal, upload_time FROM orders WHERE user_id = $1",
+		userID,
+	)
 	if err != nil {
 		return nil, err
 	}
