@@ -12,10 +12,10 @@ type Claims struct {
 }
 
 type Order struct {
-	Number     string    `json:"number"`
-	Status     string    `json:"status"`
-	UploadedAt time.Time `json:"uploaded_at"`
-	Accrual    float32   `json:"accrual"`
+	Number     string    `db:"order_id" json:"number"`
+	Status     string    `db:"status" json:"status"`
+	UploadedAt time.Time `db:"uploaded_at" json:"uploaded_at"`
+	Accrual    float32   `db:"accrual" json:"accrual,omitempty"`
 }
 
 type Balance struct {
