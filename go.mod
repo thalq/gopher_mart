@@ -1,6 +1,6 @@
 module github.com/thalq/gopher_mart
 
-go 1.23.3
+go 1.23
 
 require (
 	github.com/go-chi/chi v1.5.5
